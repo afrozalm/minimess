@@ -35,7 +35,7 @@ func main() {
 	}()
 
 	err = c.WriteMessage(websocket.TextMessage,
-		[]byte("going to send"+string(messagecount)+"messages\n"))
+		[]byte("going to send"+fmt.Sprint(messagecount)+"messages\n"))
 	if err != nil {
 		c.WriteMessage(websocket.CloseMessage,
 			websocket.FormatCloseMessage(websocket.CloseAbnormalClosure, ""))
