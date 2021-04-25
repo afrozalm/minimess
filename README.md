@@ -4,7 +4,7 @@ The goal of this project is for me to learn making an async messaging platform u
 
 ## Day 1 achievement
 
-### Server related
+### Server related 1
 
  we first setup a server which listens on port 8080 for ws connections
 
@@ -19,7 +19,7 @@ The goal of this project is for me to learn making an async messaging platform u
 
 ## Day 2 goals
 
-### Server related
+### Server related 2
 
 * support channels
 * create an API to subscribe to a topic
