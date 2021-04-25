@@ -9,18 +9,18 @@ import (
 // imports
 
 type Topic struct {
-	id          int
-	name        string
-	subscribers []*websocket.Conn
+	Name        string
+	Subscribers []*websocket.Conn
 }
 
 var ErrUnknown = errors.New("unknown topic")
+var ErrDuplicate = errors.New("topic already exists")
 
 type Repository interface {
 	// GetAll returns all topics added by the subscribers
-	GetAll() []Topic
+	GetAll() []*Topic
 	// Get topic with the given name
-	Get(string) (Topic, error)
+	Get(string) (*Topic, error)
 	// Add adds a topic to the repository of topics
-	Add(Topic) error
+	Add(*Topic) error
 }
