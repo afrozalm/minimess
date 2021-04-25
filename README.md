@@ -38,4 +38,4 @@ todo:
 
 ### misc goals
 
-* try out domain model by [Kat][https://github.com/katzien/go-structure-examples]
+* try out domain model by [Kat](https://github.com/katzien/go-structure-examples)
