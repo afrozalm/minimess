@@ -21,6 +21,7 @@ func run(s *server.Server, addr string) {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		connHandler.ServeWSConn(s, w, r)
 	})
+	log.Println("going to run server at", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatal("ListenAndServe failed with:", err)
 	}
