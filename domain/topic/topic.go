@@ -1,49 +1,44 @@
 package topic
 
 import (
-	"errors"
-
-	"github.com/gorilla/websocket"
+	"github.com/afrozalm/minimess/domain/client"
+	"github.com/afrozalm/minimess/domain/message"
+	"github.com/afrozalm/minimess/domain/sets"
 )
 
 type Topic struct {
-	Name          string
-	SubscriberMap map[string]*websocket.Conn
+	Name         string
+	Broadcast    chan *message.Message
+	clients      sets.Set
+	Close        chan bool
+	AddClient    chan *client.Client
+	RemoveClient chan *client.Client
 }
 
-var ErrUnknown = errors.New("unknown topic")
-var ErrDuplicate = errors.New("topic already exists")
-
-type Repository interface {
-	// GetAll returns all topics added by the subscribers
-	GetAll() []*Topic
-	// Get topic with the given name
-	Get(string) (*Topic, error)
-	// Add adds a topic to the repository of topics
-	Add(*Topic) error
-}
-
-func (t *Topic) AddUserConnectionById(uid string, conn *websocket.Conn) {
-	t.SubscriberMap[uid] = conn
-}
-
-func (t *Topic) RemoveUserConnectionById(uid string) {
-	if _, ok := t.SubscriberMap[uid]; ok {
-		delete(t.SubscriberMap, uid)
+func NewTopic(name string) *Topic {
+	return &Topic{
+		Name:         name,
+		Broadcast:    make(chan *message.Message, 10),
+		clients:      make(sets.Set),
+		Close:        make(chan bool),
+		AddClient:    make(chan *client.Client, 10),
+		RemoveClient: make(chan *client.Client, 10),
 	}
 }
 
-func (t *Topic) GetUserConnectionById(uid string) *websocket.Conn {
-	if conn, ok := t.SubscriberMap[uid]; ok {
-		return conn
+func (t *Topic) Run() {
+	for {
+		select {
+		case m := <-t.Broadcast:
+			for c := range t.clients {
+				c.(*client.Client).Send <- m
+			}
+		case c := <-t.AddClient:
+			t.clients.Insert(c)
+		case c := <-t.RemoveClient:
+			t.clients.Remove(c)
+		case <-t.Close:
+			return
+		}
 	}
-	return nil
-}
-
-func (t *Topic) GetAllConnections() []*websocket.Conn {
-	res := make([]*websocket.Conn, 5)
-	for _, conn := range t.SubscriberMap {
-		res = append(res, conn)
-	}
-	return res
 }

@@ -1,40 +1,43 @@
 package client
 
-import "github.com/gorilla/websocket"
+import (
+	"sync"
 
-type stringSet map[string]struct{}
+	"github.com/afrozalm/minimess/domain/message"
+	"github.com/afrozalm/minimess/domain/sets"
+	"github.com/gorilla/websocket"
+)
 
 type Client struct {
 	Uid              string
+	Send             chan *message.Message
 	Conn             *websocket.Conn
-	SubscribedTopics stringSet
+	SubscribedTopics sets.Set
+	mx               *sync.Mutex
 }
 
-func (s stringSet) insert(key string) {
-	s[key] = struct{}{}
-}
-
-func (s stringSet) remove(key string) {
-	if _, ok := s[key]; ok {
-		delete(s, key)
+func NewClient(uid string, conn *websocket.Conn) *Client {
+	return &Client{
+		Uid:              uid,
+		Conn:             conn,
+		Send:             make(chan *message.Message, 10),
+		SubscribedTopics: make(sets.Set),
+		mx:               &sync.Mutex{},
 	}
 }
 
-func (s stringSet) exists(key string) bool {
-	if _, ok := s[key]; ok {
-		return true
-	}
-	return false
+func (c *Client) AddTopicToSubscribedList(name string) {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	c.SubscribedTopics.Insert(name)
 }
 
-func GetClient(uid string, conn *websocket.Conn) *Client {
-	return &Client{Uid: uid, Conn: conn}
+func (c *Client) RemoveTopicFromSubscribedList(name string) {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+	c.SubscribedTopics.Remove(name)
 }
 
-func (c *Client) AddTopicToSubscribedList(topic string) {
-	c.SubscribedTopics.insert(topic)
-}
-
-func (c *Client) RemoveTopicFromSubscribedList(topic string) {
-	c.SubscribedTopics.remove(topic)
+func (c *Client) Close() {
+	c.Conn.Close()
 }
