@@ -2,7 +2,7 @@
 
 The goal of this project is for me to learn making an async messaging platform using go concurrency, websockets, and kafka. This project should prepare components that can run on a single laptop. Scaling is not the top priority here.
 
-## Day 1 achievement
+## Phase 1 achievement
 
 ### Server related 1
 
@@ -17,7 +17,7 @@ The goal of this project is for me to learn making an async messaging platform u
 * will connect to the server
 * will print messages it receives from the server
 
-## Day 2 goals
+## Phase 2 goals
 
 ### Server related 2
 
@@ -29,12 +29,32 @@ the client will listen to topic
 
 clients that are newly subscribed to a topic will only receive new messages
 
-todo:
+done:
+    use fanout to broadcast
     have one go routine per connection
-    decouple writer, reader, pinger, ponger
-    communicate via go channels
+    inter goroutine communicate via go channels
     create a shared struct between the separate goroutines
-    topics updates will be stored in mem and will be dropped after 5 minutes
+    decouple writer, reader, pinger, ponger
+    topics mapping will be stored in mem and will be broadcased immediately - the server will not store messages for now
+
+## Client related 2
+
+make an interactive client that looks something like below
+
+```bash
+> sub afrozalm
+> send zorfa What\'s up Zorfa
+> send mala How ya doin\' Mala
+> zorfa: I\'m fantastic. Learning some magic tricks.
+> mala: Just finished RoW. My mind is blow into millions of pieces. BrandoSando is legend
+> unsub afrozalm
+```
+
+## Future Goals
+
+* Use thrift
+* use kafka
+* use nginx
 
 ### misc goals
 
