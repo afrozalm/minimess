@@ -13,3 +13,6 @@
 
 # vscode files
 .vscode/
+
+# all .mess files
+*.mess
