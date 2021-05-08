@@ -39,11 +39,17 @@ func (h *Handler) Run() {
 func (h *Handler) connectToServer(ip string, port string) {
 	endpoint := ip + ":" + port
 	u := url.URL{Scheme: "ws", Host: endpoint, Path: "/ws"}
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
-	h.conn = c
+	conn.SetReadLimit(constants.MaxMessageSize)
+	conn.SetReadDeadline(time.Now().Add(constants.ReadTimeout))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(constants.PongTimeout))
+		return nil
+	})
+	h.conn = conn
 }
 
 func (h *Handler) handshake() {
@@ -57,10 +63,19 @@ func (h *Handler) handshake() {
 }
 
 func (h *Handler) writePump() {
-	defer h.conn.Close()
+	pingTicker := time.NewTicker(constants.PingTimeout)
+	defer func() {
+		h.conn.Close()
+		pingTicker.Stop()
+	}()
 
 	for {
 		select {
+		case <-pingTicker.C:
+			h.conn.SetWriteDeadline(time.Now().Add(constants.WriteTimeout))
+			if err := h.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
 		case <-h.done:
 			return
 		case m := <-h.Send:
@@ -91,7 +106,7 @@ func (h *Handler) readPump() {
 		if err != nil {
 			continue
 		}
-		log.Printf("[r/%s]> (u/%s): %s\n", m.Topic, m.Uid, m.Text)
+		log.Printf("[r/%s]> (@%s): %s\n", m.Topic, m.Uid, m.Text)
 	}
 }
 
