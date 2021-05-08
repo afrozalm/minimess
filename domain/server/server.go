@@ -83,10 +83,10 @@ func (server *Server) UnsubscribeClientFromTopic(client *client.Client, name str
 	client.RemoveTopicFromSubscribedList(name)
 }
 
-func (server *Server) BroadcastMessageToTopic(m *message.Message) {
-	topic := server.getTopic(m.Topic)
+func (server *Server) BroadcastMessageToTopic(message *message.Message) {
+	topic := server.getTopic(message.Topic)
 	if topic == nil {
 		return
 	}
-	topic.Broadcast <- m
+	topic.Broadcast <- message
 }
