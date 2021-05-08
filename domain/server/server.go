@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log"
 	"sync"
 
 	"github.com/afrozalm/minimess/domain/client"
@@ -65,13 +66,14 @@ func (server *Server) SubscribeClientToTopic(client *client.Client, name string)
 	var t *topic.Topic
 	if !server.existsTopic(name) {
 		t = topic.NewTopic(name)
-		t.Run()
+		go t.Run()
 		server.addTopic(t)
 	} else {
 		t = server.getTopic(name)
 	}
 	t.AddClient <- client
 	client.AddTopicToSubscribedList(name)
+	log.Printf("subscribed %s to %s\n", client.Uid, name)
 }
 
 func (server *Server) UnsubscribeClientFromTopic(client *client.Client, name string) {
@@ -81,6 +83,7 @@ func (server *Server) UnsubscribeClientFromTopic(client *client.Client, name str
 	topic := server.getTopic(name)
 	topic.RemoveClient <- client
 	client.RemoveTopicFromSubscribedList(name)
+	log.Printf("unsubscribed %s from %s\n", client.Uid, name)
 }
 
 func (server *Server) BroadcastMessageToTopic(message *message.Message) {

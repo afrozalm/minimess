@@ -19,5 +19,5 @@ const (
 	USER        = "user"
 	SUBSCRIBE   = "sub"
 	UNSUBSCRIBE = "unsub"
-	CHAT        = "chat"
+	CHAT        = "send"
 )

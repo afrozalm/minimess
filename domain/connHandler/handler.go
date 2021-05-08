@@ -1,9 +1,11 @@
 package connHandler
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/afrozalm/minimess/constants"
@@ -56,6 +58,7 @@ func writePump(s *server.Server, c *client.Client) {
 	pingTicker := time.NewTicker(constants.PingTimeout)
 	defer func() {
 		pingTicker.Stop()
+		log.Println("closing readPump for user", c.Uid)
 		c.Close()
 		s.OnClientClose(c)
 	}()
@@ -67,6 +70,8 @@ func writePump(s *server.Server, c *client.Client) {
 				return
 			}
 		case m, ok := <-c.Send:
+			log.Println("going to send message to user conn for", c.Uid)
+			c.Conn.SetWriteDeadline(time.Now().Add(constants.WriteTimeout))
 			if !ok {
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
@@ -80,12 +85,14 @@ func writePump(s *server.Server, c *client.Client) {
 			for i := 0; i < n; i++ {
 				writeMessage(<-c.Send, w)
 			}
+			log.Println("message sent", c.Uid)
 		}
 	}
 }
 
 func readPump(s *server.Server, c *client.Client) {
 	defer func() {
+		fmt.Fprintf(os.Stdout, "closing readPump for user %s", c.Uid)
 		c.Close()
 	}()
 
@@ -100,7 +107,9 @@ func readPump(s *server.Server, c *client.Client) {
 		case constants.UNSUBSCRIBE:
 			s.UnsubscribeClientFromTopic(c, m.Topic)
 		case constants.CHAT:
+			log.Printf("going to broadcast %s to %s\n", m.Text, m.Topic)
 			s.BroadcastMessageToTopic(m)
+			log.Printf("broadcast done from %s to %s\n", m.Text, m.Topic)
 		default:
 			log.Printf("not handled message for type: %s, %v", m.Type, m)
 		}
@@ -130,5 +139,4 @@ func writeMessage(m *message.Message, w io.WriteCloser) {
 		log.Printf("bad message not forwarding %v", *m)
 	}
 	w.Write(payload)
-
 }
