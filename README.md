@@ -50,6 +50,14 @@ make an interactive client that looks something like below
 > unsub afrozalm
 ```
 
+## Phase 3 goals
+
+* Improve Logging.
+  * have multiple log levels
+  * control log levels via cli flags
+* Figure out why the messages to this long to arrive client
+* update client to be able to attach to a channel and send messages there
+
 ## Future Goals
 
 * Use thrift
