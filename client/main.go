@@ -4,52 +4,28 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/url"
-	"time"
+	"os"
 
-	"github.com/gorilla/websocket"
+	"github.com/afrozalm/minimess/client/cli"
+	"github.com/afrozalm/minimess/client/connHandler"
 )
 
 func main() {
 	userID := flag.String("uid", "", "give me your user id")
 	flag.Parse()
+	if len(*userID) == 0 {
+		log.Fatal("please provide a non-empty username")
+	}
 	fmt.Println("user id given by the user is ", *userID)
-	messagecount := 5
-	endpoint := "127.0.0.1:8080"
-	u := url.URL{Scheme: "ws", Host: endpoint, Path: "/ws"}
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		log.Fatal("dail:", err)
-	}
-	defer c.Close()
 
-	go func() {
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				return
-			}
-			log.Printf("got: %s\n", message)
-		}
-	}()
-
-	err = c.WriteMessage(websocket.TextMessage,
-		[]byte("going to send"+fmt.Sprint(messagecount)+"messages\n"))
+	f, err := os.OpenFile(fmt.Sprintf("%s.mess", *userID), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		c.WriteMessage(websocket.CloseMessage,
-			websocket.FormatCloseMessage(websocket.CloseAbnormalClosure, ""))
+		log.Fatalf("error opening file: %v", err)
 	}
-	for i := 0; i < messagecount; i++ {
-		err = c.WriteMessage(websocket.TextMessage,
-			[]byte(fmt.Sprintf("hey there server, I am %s", *userID)))
-		if err != nil {
-			c.WriteMessage(websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseAbnormalClosure, ""))
-		}
-		log.Println("talked to the server")
-		time.Sleep(time.Second * 5)
-	}
-	c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-	log.Println("exiting")
+	defer f.Close()
+	log.SetOutput(f)
+
+	h := connHandler.NewHandler(*userID)
+	h.Run()
+	cli.Run(h)
 }
