@@ -85,6 +85,9 @@ func writePump(s *server.Server, c *client.Client) {
 			for i := 0; i < n; i++ {
 				writeMessage(<-c.Send, w)
 			}
+			if err := w.Close(); err != nil {
+				return
+			}
 			log.Println("message sent", c.Uid)
 		}
 	}
@@ -127,7 +130,7 @@ func readMessage(conn *websocket.Conn) (*message.Message, bool) {
 
 	m, err := message.DecodeMessage(payload)
 	if err != nil {
-		log.Println("remote error: closing due to bad handshake", err)
+		log.Println("remote error: closing due to bad payload", err)
 		return m, false
 	}
 	return m, true
