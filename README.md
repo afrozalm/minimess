@@ -2,11 +2,11 @@
 
 The goal of this project is for me to learn making an async messaging platform using go concurrency, websockets, and kafka. This project should prepare components that can run on a single laptop. Scaling is not the top priority here.
 
-## Phase 1 achievement
+## 🟢 Phase 1
 
 ### Server related 1
 
- we first setup a server which listens on port 8080 for ws connections
+We first setup a server which listens on port 8080 for ws connections
 
 * the server will send "success"
 * the server will send timestamps every few seconds
@@ -17,7 +17,7 @@ The goal of this project is for me to learn making an async messaging platform u
 * will connect to the server
 * will print messages it receives from the server
 
-## Phase 2 goals
+## 🟢 Phase 2
 
 ### Server related 2
 
@@ -27,15 +27,13 @@ The goal of this project is for me to learn making an async messaging platform u
 the client will listen to topic
 /subscribe/id:`<uid>`/topic:`<topic>`
 
-clients that are newly subscribed to a topic will only receive new messages
-
-done:
-    use fanout to broadcast
-    have one go routine per connection
-    inter goroutine communicate via go channels
-    create a shared struct between the separate goroutines
-    decouple writer, reader, pinger, ponger
-    topics mapping will be stored in mem and will be broadcased immediately - the server will not store messages for now
+* clients that are newly subscribed to a topic will only receive new messages
+* use fanout to broadcast
+* have one go routine per connection
+* inter goroutine communicate via go channels
+* create a shared struct between the separate goroutines
+* decouple writer, reader, pinger, ponger
+* topics mapping will be stored in mem and will be broadcased immediately - the serve* will not store messages for now
 
 ## Client related 2
 
@@ -50,12 +48,12 @@ make an interactive client that looks something like below
 > unsub afrozalm
 ```
 
-## Phase 3 goals
+## 🟡 Phase 3 goals
 
+* 🟢 Figure out why the messages to this long to arrive client
 * Improve Logging.
   * have multiple log levels
   * control log levels via cli flags
-* Figure out why the messages to this long to arrive client
 * update client to be able to attach to a channel and send messages there
 
 ## Future Goals
