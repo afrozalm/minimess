@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/afrozalm/minimess/constants"
 	"github.com/afrozalm/minimess/domain/client"
-	"github.com/afrozalm/minimess/domain/constants"
-	"github.com/afrozalm/minimess/domain/message"
 	"github.com/afrozalm/minimess/domain/server"
+	"github.com/afrozalm/minimess/message"
 	"github.com/gorilla/websocket"
 )
 

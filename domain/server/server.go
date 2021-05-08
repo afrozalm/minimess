@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	"github.com/afrozalm/minimess/domain/client"
-	"github.com/afrozalm/minimess/domain/message"
 	"github.com/afrozalm/minimess/domain/topic"
+	"github.com/afrozalm/minimess/message"
 )
 
 /*
@@ -83,10 +83,10 @@ func (server *Server) UnsubscribeClientFromTopic(client *client.Client, name str
 	client.RemoveTopicFromSubscribedList(name)
 }
 
-func (server *Server) BroadcastMessageToTopic(message *message.Message) {
-	topic := server.getTopic(message.Topic)
+func (server *Server) BroadcastMessageToTopic(m *message.Message) {
+	topic := server.getTopic(m.Topic)
 	if topic == nil {
 		return
 	}
-	topic.Broadcast <- message
+	topic.Broadcast <- m
 }

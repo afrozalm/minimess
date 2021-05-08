@@ -3,8 +3,8 @@ package client
 import (
 	"sync"
 
-	"github.com/afrozalm/minimess/domain/message"
-	"github.com/afrozalm/minimess/domain/sets"
+	"github.com/afrozalm/minimess/message"
+	"github.com/afrozalm/minimess/sets"
 	"github.com/gorilla/websocket"
 )
 
