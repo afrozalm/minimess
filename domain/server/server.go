@@ -1,23 +1,14 @@
 package server
 
 import (
-	"log"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/afrozalm/minimess/domain/client"
 	"github.com/afrozalm/minimess/domain/topic"
 	"github.com/afrozalm/minimess/message"
 )
-
-/*
-	the server is supposed to listen to ws connections on localhost:9091
-	for each new connection, you read what the client id is and create a client
-	start a goroutine to handle the client.
-	The server also stores topics in memory thus we need to create a storage object attached
-	server
-*/
-
-// type clientSet map[*client.Client]struct{}
 
 type Server struct {
 	topics  map[string]*topic.Topic
@@ -32,6 +23,7 @@ func NewServer() *Server {
 }
 
 func (server *Server) OnClientClose(c *client.Client) {
+	log.Trace("removing client '%s' from all subscribed topics", c.Uid)
 	for name := range c.SubscribedTopics {
 		t := server.getTopic(name.(string))
 		if t != nil {
@@ -57,6 +49,7 @@ func (server *Server) getTopic(name string) *topic.Topic {
 }
 
 func (server *Server) addTopic(topic *topic.Topic) {
+	log.Trace("adding new topic: '%s' to server", topic.Name)
 	server.topicMx.Lock()
 	defer server.topicMx.Unlock()
 	server.topics[topic.Name] = topic
@@ -64,6 +57,7 @@ func (server *Server) addTopic(topic *topic.Topic) {
 
 func (server *Server) SubscribeClientToTopic(client *client.Client, name string) {
 	var t *topic.Topic
+	log.Trace("subscribing '%s' to '%s'", client.Uid, name)
 	if !server.existsTopic(name) {
 		t = topic.NewTopic(name)
 		go t.Run()
@@ -73,22 +67,24 @@ func (server *Server) SubscribeClientToTopic(client *client.Client, name string)
 	}
 	t.AddClient <- client
 	client.AddTopicToSubscribedList(name)
-	log.Printf("subscribed %s to %s\n", client.Uid, name)
+	log.Trace("subscribed '%s' to '%s'", client.Uid, name)
 }
 
 func (server *Server) UnsubscribeClientFromTopic(client *client.Client, name string) {
 	if !server.existsTopic(name) {
+		log.Trace("topic does not exist to unsubscribe client '%s' from '%s'", client.Uid, name)
 		return
 	}
 	topic := server.getTopic(name)
 	topic.RemoveClient <- client
 	client.RemoveTopicFromSubscribedList(name)
-	log.Printf("unsubscribed %s from %s\n", client.Uid, name)
+	log.Trace("unsubscribed '%s' from '%s'", client.Uid, name)
 }
 
 func (server *Server) BroadcastMessageToTopic(message *message.Message) {
 	topic := server.getTopic(message.Topic)
 	if topic == nil {
+		log.Trace("topic '%s' does not exist to broadcast message", message.Topic)
 		return
 	}
 	topic.Broadcast <- message

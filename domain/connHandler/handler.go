@@ -1,12 +1,11 @@
 package connHandler
 
 import (
-	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/afrozalm/minimess/constants"
 	"github.com/afrozalm/minimess/domain/client"
@@ -44,9 +43,9 @@ func parseAndStartPumps(s *server.Server, conn *websocket.Conn) {
 		return
 	}
 	if m.Type != constants.USER {
-		log.Println("remote error: first message should be user type")
+		log.Info("remote error: first message should be user type")
 	}
-	log.Println("got user id", m.Uid)
+	log.Debug("got user id", m.Uid)
 
 	c := client.NewClient(m.Uid, conn)
 
@@ -58,7 +57,7 @@ func writePump(s *server.Server, c *client.Client) {
 	pingTicker := time.NewTicker(constants.PingTimeout)
 	defer func() {
 		pingTicker.Stop()
-		log.Println("closing readPump for user", c.Uid)
+		log.Trace("closing readPump for user '%s'", c.Uid)
 		c.Close()
 		s.OnClientClose(c)
 	}()
@@ -69,11 +68,12 @@ func writePump(s *server.Server, c *client.Client) {
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
+			log.Trace("ping sent to client '%s'", c.Uid)
 		case m, ok := <-c.Send:
-			log.Println("going to send message to user conn for", c.Uid)
 			c.Conn.SetWriteDeadline(time.Now().Add(constants.WriteTimeout))
 			if !ok {
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				log.Trace("closing connection for client '%s'", c.Uid)
 				return
 			}
 			w, err := c.Conn.NextWriter(websocket.TextMessage)
@@ -88,14 +88,14 @@ func writePump(s *server.Server, c *client.Client) {
 			if err := w.Close(); err != nil {
 				return
 			}
-			log.Println("message sent", c.Uid)
+			log.Trace("message sent to '%s'", c.Uid)
 		}
 	}
 }
 
 func readPump(s *server.Server, c *client.Client) {
 	defer func() {
-		fmt.Fprintf(os.Stdout, "closing readPump for user %s", c.Uid)
+		log.Trace("closing readPump for user '%s'", c.Uid)
 		c.Close()
 	}()
 
@@ -106,15 +106,17 @@ func readPump(s *server.Server, c *client.Client) {
 		}
 		switch m.Type {
 		case constants.SUBSCRIBE:
+			log.Trace("got subscribe request from '%s' to '%s'", c.Uid, m.Topic)
 			s.SubscribeClientToTopic(c, m.Topic)
 		case constants.UNSUBSCRIBE:
+			log.Trace("got unsubscribe request from '%s' to '%s'", c.Uid, m.Topic)
 			s.UnsubscribeClientFromTopic(c, m.Topic)
 		case constants.CHAT:
-			log.Printf("going to broadcast %s to %s\n", m.Text, m.Topic)
+			log.Trace("going to broadcast '%s' to '%s'", m.Text, m.Topic)
 			s.BroadcastMessageToTopic(m)
-			log.Printf("broadcast done from %s to %s\n", m.Text, m.Topic)
+			log.Trace("broadcast done from '%s' to '%s'", m.Text, m.Topic)
 		default:
-			log.Printf("not handled message for type: %s, %v", m.Type, m)
+			log.Warn("not handled message for type: '%s', %v", m.Type, m)
 		}
 	}
 }
@@ -123,14 +125,14 @@ func readMessage(conn *websocket.Conn) (*message.Message, bool) {
 	_, payload, err := conn.ReadMessage()
 	if err != nil {
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-			log.Println("closing connection with err:", err)
+			log.Info("closing connection with err:", err)
 			return nil, false
 		}
 	}
 
 	m, err := message.DecodeMessage(payload)
 	if err != nil {
-		log.Println("remote error: closing due to bad payload", err)
+		log.Warn("remote error: closing due to bad payload", err)
 		return m, false
 	}
 	return m, true
@@ -139,7 +141,7 @@ func readMessage(conn *websocket.Conn) (*message.Message, bool) {
 func writeMessage(m *message.Message, w io.WriteCloser) {
 	payload, err := m.EncodeMessage()
 	if err != nil {
-		log.Printf("bad message not forwarding %v", *m)
+		log.Warn("bad message not forwarding %v", *m)
 	}
 	w.Write(payload)
 }

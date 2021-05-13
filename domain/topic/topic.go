@@ -4,6 +4,7 @@ import (
 	"github.com/afrozalm/minimess/domain/client"
 	"github.com/afrozalm/minimess/message"
 	"github.com/afrozalm/minimess/sets"
+	log "github.com/sirupsen/logrus"
 )
 
 type Topic struct {
@@ -34,10 +35,13 @@ func (t *Topic) Run() {
 				c.(*client.Client).Send <- m
 			}
 		case c := <-t.AddClient:
+			log.Trace("adding client '%s' to topic '%s'", c.Uid, t.Name)
 			t.clients.Insert(c)
 		case c := <-t.RemoveClient:
+			log.Trace("removing client '%s' to topic '%s'", c.Uid, t.Name)
 			t.clients.Remove(c)
 		case <-t.Close:
+			log.Trace("closing topic '%s'", t.Name)
 			return
 		}
 	}

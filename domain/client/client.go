@@ -6,6 +6,7 @@ import (
 	"github.com/afrozalm/minimess/message"
 	"github.com/afrozalm/minimess/sets"
 	"github.com/gorilla/websocket"
+	log "github.com/sirupsen/logrus"
 )
 
 type Client struct {
@@ -30,14 +31,17 @@ func (c *Client) AddTopicToSubscribedList(name string) {
 	c.mx.Lock()
 	defer c.mx.Unlock()
 	c.SubscribedTopics.Insert(name)
+	log.Debug("added '%s' to subscribed topic for client '%s'", name, c.Uid)
 }
 
 func (c *Client) RemoveTopicFromSubscribedList(name string) {
 	c.mx.Lock()
 	defer c.mx.Unlock()
 	c.SubscribedTopics.Remove(name)
+	log.Debug("removed '%s' to subscribed topic for client '%s'", name, c.Uid)
 }
 
 func (c *Client) Close() {
 	c.Conn.Close()
+	log.Debug("closing conn '%s'", c.Uid)
 }
