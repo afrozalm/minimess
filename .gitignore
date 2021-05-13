@@ -16,3 +16,7 @@
 
 # all .mess files
 *.mess
+
+# all executables
+client/client
+domain/domain
