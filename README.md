@@ -52,17 +52,17 @@ $ tail -f afrozalm.mess
 2021/05/13 16:00:57 [r/afrozalm:mala:zorfa]> (@mala): Just finished RoW. My mind is blown into millions of pieces. BrandoSando is legend
 ```
 
-## 🟡 Phase 3 goals
+## 🟢 Phase 3 goals
 
-* 🟢  Figure out why the messages to this long to arrive client
+* Figure out why the messages to this long to arrive client
 * Improve Logging.
   * have multiple log levels
   * control log levels via cli flags
-* 🟢  update client
+* update client
   * add attach: client need not always write the channel name followed by message
   * add client level retries when server goes bust
 
-## Phase 4 goals
+## 🟡 Phase 4 goals
 
 * use kafka for inter server communication
 
