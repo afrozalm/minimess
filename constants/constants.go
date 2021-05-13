@@ -20,4 +20,8 @@ const (
 	SUBSCRIBE   = "sub"
 	UNSUBSCRIBE = "unsub"
 	CHAT        = "send"
+	ATTACH      = "attach"
+	DETACH      = "//"
+	NORMAL      = "normal"
+	QUIT        = "quit"
 )

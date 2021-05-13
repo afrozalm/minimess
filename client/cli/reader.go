@@ -13,8 +13,9 @@ import (
 
 func Run(h *connHandler.Handler) {
 	reader := bufio.NewReader(os.Stdin)
-	messageHolder := new(message.Message)
+	messageHolder := message.NewMessage()
 	messageHolder.Uid = h.Uid
+	mode := constants.NORMAL
 
 	for {
 		fmt.Print("> ")
@@ -23,26 +24,68 @@ func Run(h *connHandler.Handler) {
 			fmt.Fprintln(os.Stderr, err)
 		}
 		inputString = strings.Trim(inputString, "\n ")
-		split := strings.SplitN(inputString, " ", 2)
-		cmd, rest := split[0], split[1]
-		switch cmd {
-		case constants.SUBSCRIBE:
+		split := strings.Split(inputString, " ")
+		switch {
+		case len(split) == 0:
+		case mode == constants.NORMAL && split[0] == constants.SUBSCRIBE:
 			messageHolder.Type = constants.SUBSCRIBE
-			messageHolder.Topic = rest
-			h.Send <- messageHolder
-		case constants.UNSUBSCRIBE:
+			rest := split[1:]
+			if len(rest) == 0 {
+				logBadMessageType(mode, "nothing to subscribe to")
+			}
+			for _, topicName := range rest {
+				go func(topicName string) {
+					sendSubscribe(h, topicName)
+				}(topicName)
+			}
+		case mode == constants.NORMAL && split[0] == constants.UNSUBSCRIBE:
 			messageHolder.Type = constants.UNSUBSCRIBE
-			messageHolder.Topic = rest
-			h.Send <- messageHolder
-		case constants.CHAT:
-			split = strings.SplitN(rest, " ", 2)
-			topic, text := split[0], split[1]
+			rest := split[1:]
+			if len(rest) == 0 {
+				logBadMessageType(mode, "")
+			}
+			for _, topicName := range rest {
+				go func(topicName string) {
+					sendUnsubscribe(h, topicName)
+				}(topicName)
+			}
+		case mode == constants.NORMAL && split[0] == constants.ATTACH:
+			topic := split[1]
 			messageHolder.Type = constants.CHAT
 			messageHolder.Topic = topic
-			messageHolder.Text = text
-			h.Send <- messageHolder
+			mode = constants.CHAT
+		case mode == constants.CHAT:
+			if split[0] == constants.DETACH {
+				mode = constants.NORMAL
+			} else {
+				messageHolder.Text = inputString
+				h.Send <- messageHolder
+			}
+		case mode == constants.NORMAL && split[0] == constants.QUIT:
+			h.Done <- struct{}{}
+			return
 		default:
-			fmt.Fprintln(os.Stderr, "bad message type")
+			logBadMessageType(mode, "")
 		}
 	}
+}
+
+func sendSubscribe(h *connHandler.Handler, topicName string) {
+	msg := message.NewMessage()
+	msg.Type = constants.SUBSCRIBE
+	msg.Uid = h.Uid
+	msg.Topic = topicName
+	h.Send <- msg
+}
+
+func sendUnsubscribe(h *connHandler.Handler, topicName string) {
+	msg := message.NewMessage()
+	msg.Type = constants.UNSUBSCRIBE
+	msg.Uid = h.Uid
+	msg.Topic = topicName
+	h.Send <- msg
+}
+
+func logBadMessageType(mode, msg string) {
+	fmt.Fprintf(os.Stderr, "[mode:%s] bad message type - %s", mode, msg)
 }

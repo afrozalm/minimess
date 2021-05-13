@@ -16,7 +16,7 @@ type Handler struct {
 	Uid       string
 	conn      *websocket.Conn
 	interrupt chan os.Signal
-	done      chan struct{}
+	Done      chan struct{}
 }
 
 func NewHandler(uid string) *Handler {
@@ -24,7 +24,7 @@ func NewHandler(uid string) *Handler {
 		Send:      make(chan *message.Message),
 		Uid:       uid,
 		interrupt: make(chan os.Signal),
-		done:      make(chan struct{}),
+		Done:      make(chan struct{}),
 	}
 }
 
@@ -76,7 +76,7 @@ func (h *Handler) writePump() {
 			if err := h.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
-		case <-h.done:
+		case <-h.Done:
 			return
 		case m := <-h.Send:
 			err := sendMessage(m, h.conn)
@@ -87,7 +87,7 @@ func (h *Handler) writePump() {
 			h.conn.WriteMessage(websocket.CloseMessage,
 				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			select {
-			case <-h.done:
+			case <-h.Done:
 			case <-time.After(time.Second):
 			}
 			return
@@ -96,7 +96,7 @@ func (h *Handler) writePump() {
 }
 
 func (h *Handler) readPump() {
-	defer close(h.done)
+	defer close(h.Done)
 	for {
 		_, payload, err := h.conn.ReadMessage()
 		if err != nil {

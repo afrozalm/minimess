@@ -40,27 +40,36 @@ the client will listen to topic
 make an interactive client that looks something like below
 
 ```bash
-> sub afrozalm
-> send zorfa What\'s up Zorfa
-> send mala How ya doin\' Mala
-> zorfa: I\'m fantastic. Learning some magic tricks.
-> mala: Just finished RoW. My mind is blow into millions of pieces. BrandoSando is legend
-> unsub afrozalm
+> sub afrozalm:mala:zorfa
+> attach afrozalm:mala:zorfa
+> What\'s up all
+> //
+
+-----
+$ tail -f afrozalm.mess
+2021/05/13 16:00:14 [r/afrozalm:mala:zorfa]> (@afrozalm): What\'s up all
+2021/05/13 16:00:31 [r/afrozalm:mala:zorfa]> (@zorfa): I\'m fantastic. Learning some magic tricks
+2021/05/13 16:00:57 [r/afrozalm:mala:zorfa]> (@mala): Just finished RoW. My mind is blown into millions of pieces. BrandoSando is legend
 ```
 
 ## 🟡 Phase 3 goals
 
-* 🟢 Figure out why the messages to this long to arrive client
+* 🟢  Figure out why the messages to this long to arrive client
 * Improve Logging.
   * have multiple log levels
   * control log levels via cli flags
-* update client to be able to attach to a channel and send messages there
+* 🟢  update client
+  * add attach: client need not always write the channel name followed by message
+  * add client level retries when server goes bust
+
+## Phase 4 goals
+
+* use kafka for inter server communication
 
 ## Future Goals
 
+* place two servers behind nginx or HAProxy
 * Use thrift
-* use kafka
-* use nginx
 
 ### misc goals
 

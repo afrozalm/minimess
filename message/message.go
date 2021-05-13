@@ -17,6 +17,10 @@ type Message struct {
 	Text  string
 }
 
+func NewMessage() *Message {
+	return &Message{}
+}
+
 func DecodeMessage(payload []byte) (*Message, error) {
 	payload = bytes.TrimSpace(bytes.Replace(payload, newline, space, -1))
 	m := &Message{}
