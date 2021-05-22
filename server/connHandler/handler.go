@@ -8,9 +8,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/afrozalm/minimess/constants"
-	"github.com/afrozalm/minimess/domain/client"
-	"github.com/afrozalm/minimess/domain/server"
 	"github.com/afrozalm/minimess/message"
+	"github.com/afrozalm/minimess/server/client"
+	"github.com/afrozalm/minimess/server/server"
 	"github.com/gorilla/websocket"
 )
 

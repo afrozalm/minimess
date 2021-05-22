@@ -1,8 +1,8 @@
 package topic
 
 import (
-	"github.com/afrozalm/minimess/domain/client"
 	"github.com/afrozalm/minimess/message"
+	"github.com/afrozalm/minimess/server/client"
 	"github.com/afrozalm/minimess/sets"
 	log "github.com/sirupsen/logrus"
 )

@@ -5,9 +5,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/afrozalm/minimess/domain/client"
-	"github.com/afrozalm/minimess/domain/topic"
 	"github.com/afrozalm/minimess/message"
+	"github.com/afrozalm/minimess/server/client"
+	"github.com/afrozalm/minimess/server/topic"
 )
 
 type Server struct {

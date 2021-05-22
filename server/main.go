@@ -2,19 +2,29 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/http"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/afrozalm/minimess/server/connHandler"
+	"github.com/afrozalm/minimess/server/server"
 )
 
 func main() {
-	port := flag.String("port", "127.0.0.1:8080", "the port at which the server listenes to client requests")
+	port := flag.String("port", "8080", "http service address")
 	flag.Parse()
-	// fmt.Println("got port as ", *port)
-	// fmt.Println("Current time in unix epoch seconds is", time.Now().Unix())
+	log.SetLevel(log.WarnLevel)
+	s := server.NewServer()
+	addr := "127.0.0.1:" + *port
+	run(s, addr)
+}
 
-	http.HandleFunc("/ws", serveTimestamps)
-
-	if err := http.ListenAndServe(*port, nil); err != nil {
-		log.Println("ListenAndServe failed with:", err)
+func run(s *server.Server, addr string) {
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		connHandler.ServeWSConn(s, w, r)
+	})
+	log.Info("going to run server at", addr)
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		log.Fatal("ListenAndServe failed with:", err)
 	}
 }
