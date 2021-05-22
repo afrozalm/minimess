@@ -24,4 +24,8 @@ const (
 	DETACH      = "//"
 	NORMAL      = "normal"
 	QUIT        = "quit"
+
+	// kafka
+	BootstrapServers = "localhost:9091,localhost:9092,localhost:9093"
+	MessageTopic     = "message-log"
 )
