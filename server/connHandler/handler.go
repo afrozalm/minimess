@@ -1,16 +1,19 @@
 package connHandler
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"time"
 
+	"github.com/gocql/gocql"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/afrozalm/minimess/constants"
 	"github.com/afrozalm/minimess/message"
 	"github.com/afrozalm/minimess/server/client"
-	"github.com/afrozalm/minimess/server/server"
+	"github.com/afrozalm/minimess/server/supervisor"
 	"github.com/gorilla/websocket"
 )
 
@@ -20,7 +23,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func ServeWSConn(s *server.Server, w http.ResponseWriter, r *http.Request) {
+func ServeWSConn(s *supervisor.Supervisor, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Fatal("Could not upgrade to ws connection due to", err)
@@ -29,7 +32,7 @@ func ServeWSConn(s *server.Server, w http.ResponseWriter, r *http.Request) {
 	go parseAndStartPumps(s, conn)
 }
 
-func parseAndStartPumps(s *server.Server, conn *websocket.Conn) {
+func parseAndStartPumps(s *supervisor.Supervisor, conn *websocket.Conn) {
 	conn.SetReadLimit(constants.MaxMessageSize)
 	conn.SetReadDeadline(time.Now().Add(constants.ReadTimeout))
 	conn.SetPongHandler(func(string) error {
@@ -45,19 +48,20 @@ func parseAndStartPumps(s *server.Server, conn *websocket.Conn) {
 	if m.Type != constants.USER {
 		log.Info("remote error: first message should be user type")
 	}
-	log.Debug("got user id", m.Uid)
+	log.Debug("got user id ", m.GetUserID())
 
-	c := client.NewClient(m.Uid, conn)
+	c := client.NewClient(m.GetUserID(), conn)
+	s.AddClient(c)
 
 	go writePump(s, c)
 	go readPump(s, c)
 }
 
-func writePump(s *server.Server, c *client.Client) {
+func writePump(s *supervisor.Supervisor, c *client.Client) {
 	pingTicker := time.NewTicker(constants.PingTimeout)
 	defer func() {
 		pingTicker.Stop()
-		log.Trace("closing readPump for user '%s'", c.Uid)
+		log.Trace(fmt.Sprintf("closing readPump for user '%s'", c.GetUserID()))
 		c.Close()
 		s.OnClientClose(c)
 	}()
@@ -68,15 +72,15 @@ func writePump(s *server.Server, c *client.Client) {
 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
-			log.Trace("ping sent to client '%s'", c.Uid)
+			log.Trace(fmt.Sprintf("ping sent to client '%s'", c.GetUserID()))
 		case m, ok := <-c.Send:
 			c.Conn.SetWriteDeadline(time.Now().Add(constants.WriteTimeout))
 			if !ok {
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
-				log.Trace("closing connection for client '%s'", c.Uid)
+				log.Trace(fmt.Sprintf("closing connection for client '%s'", c.GetUserID()))
 				return
 			}
-			w, err := c.Conn.NextWriter(websocket.TextMessage)
+			w, err := c.Conn.NextWriter(websocket.BinaryMessage)
 			if err != nil {
 				return
 			}
@@ -88,14 +92,14 @@ func writePump(s *server.Server, c *client.Client) {
 			if err := w.Close(); err != nil {
 				return
 			}
-			log.Trace("message sent to '%s'", c.Uid)
+			log.Trace(fmt.Sprintf("message sent to '%s'", c.GetUserID()))
 		}
 	}
 }
 
-func readPump(s *server.Server, c *client.Client) {
+func readPump(s *supervisor.Supervisor, c *client.Client) {
 	defer func() {
-		log.Trace("closing readPump for user '%s'", c.Uid)
+		log.Trace(fmt.Sprintf("closing readPump for user '%s'", c.GetUserID()))
 		c.Close()
 	}()
 
@@ -106,42 +110,41 @@ func readPump(s *server.Server, c *client.Client) {
 		}
 		switch m.Type {
 		case constants.SUBSCRIBE:
-			log.Trace("got subscribe request from '%s' to '%s'", c.Uid, m.Topic)
+			log.Trace(fmt.Sprintf("got subscribe request from '%s' to '%s'", c.GetUserID(), m.GetTopic()))
 			s.SubscribeClientToTopic(c, m.Topic)
 		case constants.UNSUBSCRIBE:
-			log.Trace("got unsubscribe request from '%s' to '%s'", c.Uid, m.Topic)
+			log.Trace(fmt.Sprintf("got unsubscribe request from '%s' to '%s'", c.GetUserID(), m.GetTopic()))
 			s.UnsubscribeClientFromTopic(c, m.Topic)
 		case constants.CHAT:
-			log.Trace("going to broadcast '%s' to '%s'", m.Text, m.Topic)
-			s.BroadcastMessageToTopic(m)
-			log.Trace("broadcast done from '%s' to '%s'", m.Text, m.Topic)
+			log.Trace(fmt.Sprintf("going to broadcast '%s' to '%s'", m.Text, m.GetTopic()))
+			m.TimeUUID = gocql.TimeUUID().Bytes()
+			s.BroadcastMessageToKafka(m)
+			log.Trace(fmt.Sprintf("broadcasted '%s' to '%s'", m.GetText(), m.GetTopic()))
 		default:
-			log.Warn("not handled message for type: '%s', %v", m.Type, m)
+			log.Warn(fmt.Sprintf("not handled message for type: '%s', %v", m.GetType(), m))
 		}
 	}
 }
 
-func readMessage(conn *websocket.Conn) (*message.Message, bool) {
+func readMessage(conn *websocket.Conn) (*message.Chat, bool) {
 	_, payload, err := conn.ReadMessage()
 	if err != nil {
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 			log.Info("closing connection with err:", err)
 			return nil, false
 		}
+		log.Info("read error from connection")
+		return nil, false
 	}
-
-	m, err := message.DecodeMessage(payload)
+	var m message.Chat
+	err = proto.Unmarshal(payload, &m)
 	if err != nil {
 		log.Warn("remote error: closing due to bad payload", err)
-		return m, false
+		return nil, false
 	}
-	return m, true
+	return &m, true
 }
 
-func writeMessage(m *message.Message, w io.WriteCloser) {
-	payload, err := m.EncodeMessage()
-	if err != nil {
-		log.Warn("bad message not forwarding %v", *m)
-	}
+func writeMessage(payload []byte, w io.WriteCloser) {
 	w.Write(payload)
 }
