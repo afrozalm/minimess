@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package message;
+option go_package = "/message";
+
+message Chat {
+    string Type = 1;
+    string UserID = 2;
+    string Topic = 3;
+    string Text = 4;
+    bytes TimeUUID = 5;
+}
