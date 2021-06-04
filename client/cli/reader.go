@@ -13,8 +13,9 @@ import (
 
 func Run(h *connHandler.Handler) {
 	reader := bufio.NewReader(os.Stdin)
-	messageHolder := message.NewMessage()
-	messageHolder.Uid = h.Uid
+	messageHolder := &message.Chat{
+		UserID: h.Uid,
+	}
 	mode := constants.NORMAL
 
 	for {
@@ -71,19 +72,19 @@ func Run(h *connHandler.Handler) {
 }
 
 func sendSubscribe(h *connHandler.Handler, topicName string) {
-	msg := message.NewMessage()
-	msg.Type = constants.SUBSCRIBE
-	msg.Uid = h.Uid
-	msg.Topic = topicName
-	h.Send <- msg
+	h.Send <- &message.Chat{
+		Type:   constants.SUBSCRIBE,
+		UserID: h.Uid,
+		Topic:  topicName,
+	}
 }
 
 func sendUnsubscribe(h *connHandler.Handler, topicName string) {
-	msg := message.NewMessage()
-	msg.Type = constants.UNSUBSCRIBE
-	msg.Uid = h.Uid
-	msg.Topic = topicName
-	h.Send <- msg
+	h.Send <- &message.Chat{
+		Type:   constants.UNSUBSCRIBE,
+		UserID: h.Uid,
+		Topic:  topicName,
+	}
 }
 
 func logBadMessageType(mode, msg string) {

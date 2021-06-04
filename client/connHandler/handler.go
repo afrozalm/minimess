@@ -9,10 +9,11 @@ import (
 	"github.com/afrozalm/minimess/constants"
 	"github.com/afrozalm/minimess/message"
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/proto"
 )
 
 type Handler struct {
-	Send      chan *message.Message
+	Send      chan *message.Chat
 	Uid       string
 	conn      *websocket.Conn
 	interrupt chan os.Signal
@@ -21,7 +22,7 @@ type Handler struct {
 
 func NewHandler(uid string) *Handler {
 	return &Handler{
-		Send:      make(chan *message.Message),
+		Send:      make(chan *message.Chat),
 		Uid:       uid,
 		interrupt: make(chan os.Signal),
 		Done:      make(chan struct{}),
@@ -53,9 +54,10 @@ func (h *Handler) connectToServer(ip string, port string) {
 }
 
 func (h *Handler) handshake() {
-	m := new(message.Message)
-	m.Type = constants.USER
-	m.Uid = h.Uid
+	m := &message.Chat{
+		Type:   constants.USER,
+		UserID: h.Uid,
+	}
 	err := sendMessage(m, h.conn)
 	if err != nil {
 		log.Fatal("handshake failed due to ", err)
@@ -102,21 +104,22 @@ func (h *Handler) readPump() {
 		if err != nil {
 			return
 		}
-		m, err := message.DecodeMessage(payload)
+		var m message.Chat
+		err = proto.Unmarshal(payload, &m)
 		if err != nil {
 			continue
 		}
-		log.Printf("[r/%s]> (@%s): %s\n", m.Topic, m.Uid, m.Text)
+		log.Printf("[r/%s]> (@%s): %s\n", m.Topic, m.GetUserID(), m.Text)
 	}
 }
 
-func sendMessage(m *message.Message, conn *websocket.Conn) error {
-	payload, err := m.EncodeMessage()
+func sendMessage(m *message.Chat, conn *websocket.Conn) error {
+	payload, err := proto.Marshal(m)
 	if err != nil {
 		return err
 	}
 	conn.SetWriteDeadline(time.Now().Add(constants.WriteTimeout))
-	err = conn.WriteMessage(websocket.TextMessage, payload)
+	err = conn.WriteMessage(websocket.BinaryMessage, payload)
 	if err != nil {
 		return err
 	}
