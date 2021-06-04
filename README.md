@@ -62,14 +62,14 @@ $ tail -f afrozalm.mess
   * add attach: client need not always write the channel name followed by message
   * add client level retries when server goes bust
 
-## 🟡 Phase 4 goals
+## 🟢 Phase 4 goals
 
 * use kafka for inter server communication
+* use proto buf for ser-deser
 
 ## Future Goals
 
 * place two servers behind nginx or HAProxy
-* Use thrift
 
 ### misc goals
 
