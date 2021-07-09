@@ -1,6 +1,7 @@
 package connHandler
 
 import (
+	"fmt"
 	"log"
 	"net/url"
 	"os"
@@ -30,15 +31,15 @@ func NewHandler(uid string) *Handler {
 }
 
 func (h *Handler) Run() {
-	h.connectToServer("127.0.0.1", "8080")
+	h.connectToServer()
 	h.handshake()
 
 	go h.writePump()
 	go h.readPump()
 }
 
-func (h *Handler) connectToServer(ip string, port string) {
-	endpoint := ip + ":" + port
+func (h *Handler) connectToServer() {
+	endpoint := fmt.Sprintf("127.0.0.1:%d", constants.FrontendClientBasePort)
 	u := url.URL{Scheme: "ws", Host: endpoint, Path: "/ws"}
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
