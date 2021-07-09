@@ -13,9 +13,10 @@ import (
 
 type AtLeastOnceProducer struct {
 	Writer *kafka.Writer
+	ctx    context.Context
 }
 
-func NewAtLeaseOnceProducer(acks, maxAttempts int) *AtLeastOnceProducer {
+func NewAtLeaseOnceProducer(ctx context.Context, acks, maxAttempts int) *AtLeastOnceProducer {
 	w := &kafka.Writer{
 		Addr:         kafka.TCP(constants.Brokers...),
 		Topic:        constants.MessageTopic,
@@ -27,6 +28,7 @@ func NewAtLeaseOnceProducer(acks, maxAttempts int) *AtLeastOnceProducer {
 	log.Trace("created a new producer")
 	return &AtLeastOnceProducer{
 		Writer: w,
+		ctx:    ctx,
 	}
 }
 
@@ -36,7 +38,7 @@ func (producer *AtLeastOnceProducer) Produce(message *message.Chat) error {
 		return err
 	}
 
-	return producer.Writer.WriteMessages(context.Background(),
+	return producer.Writer.WriteMessages(producer.ctx,
 		kafka.Message{
 			Key:   []byte(message.Topic),
 			Value: encoding,
