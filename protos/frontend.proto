@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package frontend;
+import "google/protobuf/empty.proto";
+import "protos/message.proto";
+option go_package = "github.com/afrozalm/minimess/server/frontend";
+
+service FrontEnd {
+    rpc BroadcastOut(message.Chat) returns (google.protobuf.Empty);
+}

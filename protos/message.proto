@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package message;
-option go_package = "/message";
+option go_package = "github.com/afrozalm/minimess/message";
 
 message Chat {
     string Type = 1;

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package fanout;
+import "google/protobuf/empty.proto";
+option go_package = "github.com/afrozalm/minimess/server/fanout";
+
+message HostTopic {
+    string host = 1;
+    string topic = 2;
+}
+
+message Host {
+    string host = 1;
+}
+
+service Fanout {
+    rpc Subscribe(HostTopic) returns (google.protobuf.Empty);
+    rpc Unsubscribe(HostTopic) returns (google.protobuf.Empty);
+    rpc UnsubscribeAll(Host) returns (google.protobuf.Empty);
+}
