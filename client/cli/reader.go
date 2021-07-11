@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -11,7 +12,7 @@ import (
 	"github.com/afrozalm/minimess/message"
 )
 
-func Run(h *connHandler.Handler) {
+func Run(h *connHandler.Handler, ctx context.Context) {
 	reader := bufio.NewReader(os.Stdin)
 	messageHolder := &message.Chat{
 		UserID: h.Uid,
@@ -26,6 +27,11 @@ func Run(h *connHandler.Handler) {
 		}
 		inputString = strings.Trim(inputString, "\n ")
 		split := strings.Split(inputString, " ")
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		switch {
 		case len(split) == 0:
 		case mode == constants.NORMAL && split[0] == constants.SUBSCRIBE:
@@ -62,9 +68,6 @@ func Run(h *connHandler.Handler) {
 				messageHolder.Text = inputString
 				h.Send <- messageHolder
 			}
-		case mode == constants.NORMAL && split[0] == constants.QUIT:
-			h.Done <- struct{}{}
-			return
 		default:
 			logBadMessageType(mode, "")
 		}

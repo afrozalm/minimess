@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/afrozalm/minimess/client/cli"
 	"github.com/afrozalm/minimess/client/connHandler"
@@ -25,7 +29,15 @@ func main() {
 	defer f.Close()
 	log.SetOutput(f)
 
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
+
 	h := connHandler.NewHandler(*userID)
-	h.Run()
-	cli.Run(h)
+	go h.Run(ctx)
+	go cli.Run(h, ctx)
+
+	<-sig
+	cancel()
+	time.Sleep(5 * time.Second)
 }

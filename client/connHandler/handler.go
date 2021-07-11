@@ -1,10 +1,10 @@
 package connHandler
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/afrozalm/minimess/constants"
@@ -14,28 +14,32 @@ import (
 )
 
 type Handler struct {
-	Send      chan *message.Chat
-	Uid       string
-	conn      *websocket.Conn
-	interrupt chan os.Signal
-	Done      chan struct{}
+	Send chan *message.Chat
+	Uid  string
+	conn *websocket.Conn
 }
 
 func NewHandler(uid string) *Handler {
 	return &Handler{
-		Send:      make(chan *message.Chat),
-		Uid:       uid,
-		interrupt: make(chan os.Signal),
-		Done:      make(chan struct{}),
+		Send: make(chan *message.Chat),
+		Uid:  uid,
 	}
 }
 
-func (h *Handler) Run() {
-	h.connectToServer()
-	h.handshake()
+func (h *Handler) Run(ctx context.Context) {
+	for {
+		h.connectToServer()
+		h.handshake()
 
-	go h.writePump()
-	go h.readPump()
+		go h.readPump(ctx)
+		h.writePump(ctx)
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+	}
 }
 
 func (h *Handler) connectToServer() {
@@ -43,7 +47,7 @@ func (h *Handler) connectToServer() {
 	u := url.URL{Scheme: "ws", Host: endpoint, Path: "/ws"}
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		log.Fatal("dial:", err)
+		log.Fatal("err connection to server:", err)
 	}
 	conn.SetReadLimit(constants.MaxMessageSize)
 	conn.SetReadDeadline(time.Now().Add(constants.ReadTimeout))
@@ -65,9 +69,11 @@ func (h *Handler) handshake() {
 	}
 }
 
-func (h *Handler) writePump() {
+func (h *Handler) writePump(ctx context.Context) {
 	pingTicker := time.NewTicker(constants.PingTimeout)
 	defer func() {
+		h.conn.WriteMessage(websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		h.conn.Close()
 		pingTicker.Stop()
 	}()
@@ -79,27 +85,18 @@ func (h *Handler) writePump() {
 			if err := h.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
-		case <-h.Done:
-			return
 		case m := <-h.Send:
 			err := sendMessage(m, h.conn)
 			if err != nil {
 				return
 			}
-		case <-h.interrupt:
-			h.conn.WriteMessage(websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			select {
-			case <-h.Done:
-			case <-time.After(time.Second):
-			}
+		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (h *Handler) readPump() {
-	defer close(h.Done)
+func (h *Handler) readPump(ctx context.Context) {
 	for {
 		_, payload, err := h.conn.ReadMessage()
 		if err != nil {
@@ -111,6 +108,12 @@ func (h *Handler) readPump() {
 			continue
 		}
 		log.Printf("[r/%s]> (@%s): %s\n", m.Topic, m.GetUserID(), m.Text)
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 	}
 }
 
